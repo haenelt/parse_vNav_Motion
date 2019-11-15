@@ -5,6 +5,8 @@ import itertools
 import glob
 import argparse
 import json
+# RobF: 20190826
+import h5py
 
 def normalize(x):
   return x / np.sqrt(np.dot(x,x))
@@ -183,9 +185,23 @@ if __name__ == '__main__':
   output_type.add_argument('--mean-max', action='store_true', help='Print time-averaged max motion.')
   output_type.add_argument('--rms-scores', action='store_true', help='Print root mean square (RMS) motion over time.')
   output_type.add_argument('--max-scores', action='store_true', help='Print max motion over time.')
+  parser.add_argument('--output-mats-path',type=os.path.abspath,
+                      help='path where to save a motion_parameters_vnav.h5 file containing the transformation matrices')
 
   args = parser.parse_args()
-  
+
+  rAndt = readRotAndTrans(args.input)
+  transforms = [motionEntryToHomogeneousTransform(e) for e in rAndt]
+  print("number of motion estimates = ",len(transforms))
+
+  # save the transforms matrices if output path supplied
+  if args.output_mats_path:
+    with h5py.File(args.output_mats_path + '/motion_parameters_vnav.h5', 'w') as hf:
+      hf.create_dataset("vnavmotion",  data=transforms)
+# for x in range(len(transforms)):
+#    print("rotation matrix: ",transforms[x][:3,:3].flatten())
+#    print("translations: ",transforms[x][:3,3].flatten())
+
   scores = parseMotion(readRotAndTrans(args.input), args.tr, args.radius)
 
   # Script output to STDOUT depending on "output_type"
@@ -195,5 +211,9 @@ if __name__ == '__main__':
     print(scores['mean_max'])
   elif args.rms_scores:
     print('\n'.join(map(str, scores['rms_scores'])))
+    # save the RMS scores if output path supplied
+    if args.output_mats_path:
+      with h5py.File(args.output_mats_path + '/rms_scores_vnav.h5', 'w') as hf:
+        hf.create_dataset("rmsscores",  data=scores['rms_scores'])
   elif args.max_scores:
     print('\n'.join(map(str, scores['max_scores'])))
