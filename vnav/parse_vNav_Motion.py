@@ -16,7 +16,11 @@ def readRotAndTrans(paths):
 
   head = [(np.array([1,0,0,0]),np.array([0,0,0]))]
   ds = sorted([pydicom.dcmread(x) for x in files], key=lambda dcm: dcm.AcquisitionNumber)
-  imageComments = [ str.split(x.ImageComments) for x in ds[1:] if 'ImageComments' in x ]
+  #imageComments = [ str.split(x.ImageComments) for x in ds[1:] if 'ImageComments' in x ]
+  # want to avoid
+  # - 'Reference volume for motion correction'
+  # - shim images: 'Shim Adjust ROI', Phase Unwrapped fieldmap', 'Field_Map'
+  imageComments = [ str.split(x.ImageComments) for x in ds if 'ImageComments' in x and str.split(x.ImageComments)[0] == 'R:' ]
 
   return list(itertools.chain.from_iterable([head, [ (np.array(list(map(float, y[1:5]))), list(map(float, y[6:9]))) for y in imageComments] ]))
 
