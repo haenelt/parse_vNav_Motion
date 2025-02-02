@@ -210,7 +210,14 @@ def parseMotion(rotAndTrans, tr, radius):
     return scores
 
 
-def parse_vnav(dir_in: Path, dir_out: Path, tr: float, radius: float = 64) -> None:
+def parse_vnav(
+    dir_in: Path,
+    dir_out: Path,
+    tr: float,
+    radius: float = 64,
+    basename_param: str = "motion_parameters_vnav",
+    basename_rms: str = "rms_scores_vnav",
+) -> None:
     """Parse DICOM files from a vNav series into different motion scores.
 
     Args:
@@ -220,6 +227,9 @@ def parse_vnav(dir_in: Path, dir_out: Path, tr: float, radius: float = 64) -> No
         tr: Repetition time (TR) of the parent sequence in s.
         radius: Assumed brain radius in millimeters for estimating rotation distance.
             Defaults to 64.
+
+    Daniel Haenelt
+    2/1/2025
     """
     r_and_t = readRotAndTrans([str(dir_in / "*")])
     transforms = [motionEntryToHomogeneousTransform(e) for e in r_and_t]
@@ -227,7 +237,7 @@ def parse_vnav(dir_in: Path, dir_out: Path, tr: float, radius: float = 64) -> No
 
     # save the transforms matrices
     dir_out.mkdir(exist_ok=True, parents=True)
-    with h5py.File(dir_out / "motion_parameters_vnav.h5", "w") as hf:
+    with h5py.File(dir_out / f"{basename_param}.h5", "w") as hf:
         hf.create_dataset("vnavmotion", data=transforms)
 
     scores = parseMotion(r_and_t, tr, radius)
@@ -239,7 +249,7 @@ def parse_vnav(dir_in: Path, dir_out: Path, tr: float, radius: float = 64) -> No
     # print('\n'.join(map(str, scores['max_scores'])))  # max motion over time.
 
     # save the RMS scores
-    with h5py.File(Path(dir_out) / "rms_scores_vnav.h5", "w") as hf:
+    with h5py.File(Path(dir_out) / f"{basename_rms}.h5", "w") as hf:
         hf.create_dataset("rmsscores", data=scores["rms_scores"])
 
 
